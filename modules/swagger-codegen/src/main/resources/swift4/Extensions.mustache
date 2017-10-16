@@ -5,8 +5,7 @@
 //
 
 import Foundation
-import Alamofire{{#usePromiseKit}}
-import PromiseKit{{/usePromiseKit}}
+import Alamofire
 
 extension Bool: JSONEncodable {
     func encodeToJSON() -> Any { return self as Any }
@@ -66,16 +65,17 @@ extension Data: JSONEncodable {
     }
 }
 
-private let dateFormatter: DateFormatter = {
-    let fmt = DateFormatter()
-    fmt.dateFormat = Configuration.dateFormat
-    fmt.locale = Locale(identifier: "en_US_POSIX")
-    return fmt
+private let dateTimeFormatter: DateFormatter = {
+    return CodableHelper.dateFormatter(dateFormat: Configuration.dateTimeFormat)
+}()
+
+private let dateNoTimeFormatter: DateFormatter = {
+    return CodableHelper.dateFormatter(dateFormat: Configuration.dateFormat)
 }()
 
 extension Date: JSONEncodable {
     func encodeToJSON() -> Any {
-        return dateFormatter.string(from: self) as Any
+        return CodableHelper.dateFormatter(forDate: self).string(from: self) as Any
     }
 }
 
@@ -170,17 +170,3 @@ extension KeyedDecodingContainerProtocol {
     }
 
 }
-
-{{#usePromiseKit}}extension RequestBuilder {
-    public func execute() -> Promise<Response<T>>  {
-        let deferred = Promise<Response<T>>.pending()
-        self.execute { (response: Response<T>?, error: Error?) in
-            if let response = response {
-                deferred.fulfill(response)
-            } else {
-                deferred.reject(error!)
-            }
-        }
-        return deferred.promise
-    }
-}{{/usePromiseKit}}

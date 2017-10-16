@@ -11,15 +11,50 @@ public typealias EncodeResult = (data: Data?, error: Error?)
 
 open class CodableHelper {
 
-    open class func decode<T>(_ type: T.Type, from data: Data) -> (decodableObj: T?, error: Error?) where T : Decodable {
+    public static let dateFormatters: [DateFormatter] = {
+        return [
+            dateFormatter(dateFormat: Configuration.dateTimeFormat),
+            dateFormatter(dateFormat: Configuration.dateFormat)
+        ]
+    }()
+
+    private static let calendar: Calendar = {
+        var calendar = Calendar.current
+        calendar.timeZone = TimeZone(abbreviation: "UTC")!
+        return calendar
+    }()
+
+    public class func dateFormatter(dateFormat: String) -> DateFormatter {
+        let formatter = DateFormatter()
+        formatter.dateFormat = dateFormat
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(abbreviation: "UTC")
+        return formatter
+    }
+
+    open class func decode<T>(_ type: T.Type, from data: Data) -> (decodableObj: T?, error: Error?) where T: Decodable {
         var returnedDecodable: T? = nil
         var returnedError: Error? = nil
 
         let decoder = JSONDecoder()
         decoder.dataDecodingStrategy = .base64
-        if #available(iOS 10.0, *) {
-            decoder.dateDecodingStrategy = .iso8601
-        }
+        decoder.dateDecodingStrategy = .custom({ (decoder) -> Date in
+            let container = try decoder.singleValueContainer()
+            let dateStr = try container.decode(String.self)
+            var date: Date?
+
+            for formatter in dateFormatters {
+                if let tstDate = formatter.date(from: dateStr) {
+                    date = tstDate
+                    break
+                }
+            }
+
+            guard date != nil else {
+                throw DecodingError.dataCorruptedError(in: container, debugDescription: "Cannot decode date string \(dateStr)")
+            }
+            return date!
+        })
 
         do {
             returnedDecodable = try decoder.decode(type, from: data)
@@ -30,7 +65,7 @@ open class CodableHelper {
         return (returnedDecodable, returnedError)
     }
 
-    open class func encode<T>(_ value: T, prettyPrint: Bool = false) -> EncodeResult where T : Encodable {
+    open class func encode<T>(_ value: T, prettyPrint: Bool = false) -> EncodeResult where T: Encodable {
         var returnedData: Data?
         var returnedError: Error? = nil
 
@@ -39,8 +74,10 @@ open class CodableHelper {
             encoder.outputFormatting = .prettyPrinted
         }
         encoder.dataEncodingStrategy = .base64
-        if #available(iOS 10.0, *) {
-            encoder.dateEncodingStrategy = .iso8601
+        encoder.dateEncodingStrategy = .custom { date, encoder in
+            let formatter = dateFormatter(forDate: date)
+            var container = encoder.singleValueContainer()
+            try container.encode(formatter.string(from: date))
         }
 
         do {
@@ -50,6 +87,21 @@ open class CodableHelper {
         }
 
         return (returnedData, returnedError)
+    }
+
+    public static func dateFormatter(forDate date: Date) -> DateFormatter {
+        let hour = calendar.component(.hour, from: date)
+        let minutes = calendar.component(.minute, from: date)
+        let seconds = calendar.component(.second, from: date)
+        let nanosecond = calendar.component(.nanosecond, from: date)
+
+        let formatter: DateFormatter
+        if hour == 0 && minutes == 0 && seconds == 0 && nanosecond == 0 {
+            formatter = dateFormatters[1]
+        } else {
+            formatter = dateFormatters[0]
+        }
+        return formatter
     }
 
 }
