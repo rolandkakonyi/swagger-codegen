@@ -3140,7 +3140,7 @@ public class DefaultCodegen {
 
                 // if required, add to the list "requiredVars"
                 if (Boolean.TRUE.equals(cp.required)) {
-                    m.requiredVars.add(cp);
+                    m.requiredVars.add(cp.clone());
                 } else { // else add to the list "optionalVars" for optional property
                     m.optionalVars.add(cp);
                 }
@@ -3153,6 +3153,11 @@ public class DefaultCodegen {
                     m.readWriteVars.add(cp);
                 }
             }
+        }
+        List<CodegenProperty> requiredVars = m.requiredVars;
+        for (int i = 0; i < requiredVars.size(); i++) {
+            CodegenProperty cp = requiredVars.get(i);
+            cp.hasMore = (i + 1 < requiredVars.size());
         }
     }
 
