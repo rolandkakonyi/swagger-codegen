@@ -49,10 +49,10 @@ public class KotlinClientCodegenModelTest {
         final Model model = getSimpleModel();
         final DefaultCodegen codegen = new KotlinClientCodegen();
 
-        final CodegenModel cm = codegen.fromModel("sample", model);
+        final CodegenModel cm = codegen.fromModel("namespace\\sample", model);
 
-        Assert.assertEquals(cm.name, "sample");
-        Assert.assertEquals(cm.classname, "Sample");
+        Assert.assertEquals(cm.name, "namespace\\sample");
+        Assert.assertEquals(cm.classname, "Namespacesample");
         Assert.assertEquals(cm.description, "a sample model");
         Assert.assertEquals(cm.vars.size(), 3);
 
